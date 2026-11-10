@@ -1,0 +1,28 @@
+name: icc-bot
+on:
+  schedule:
+    - cron: "50 * * * *"
+    - cron: "2 * * * *"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      DATA_SOURCE: yahoo
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      TZ_NAME: Africa/Kampala
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yfinance pandas numpy requests
+      - name: Test alert (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        run: python icc_bot.py --test-alert
+      - name: Scan
+        if: github.event_name == 'schedule'
+        run: |
+          if [ "$(date -u +%M)" -ge 30 ]; then python icc_bot.py --headsup; else python icc_bot.py --signal; fi
